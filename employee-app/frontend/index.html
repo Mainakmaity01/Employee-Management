@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Employee Management App</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+    .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    h2 { text-align: center; }
+    label { display: block; margin-top: 10px; }
+    input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+    .btn { background: #28a745; color: white; border: none; padding: 10px; cursor: pointer; margin-top: 15px; }
+    .btn:hover { background: #218838; }
+    .hidden { display: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+    .filters input, .filters select { width: auto; flex: 1; }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div class="container" id="loginPage">
+    <h2>Login</h2>
+    <label>Username:</label>
+    <input type="text" id="username">
+    <label>Password:</label>
+    <input type="password" id="password">
+    <button class="btn" onclick="login()">Login</button>
+  </div>
+
+  <!-- Employee Form Page -->
+  <div class="container hidden" id="employeeFormPage">
+    <h2>Add Employee</h2>
+    <form id="employeeForm" enctype="multipart/form-data">
+      <label>First Name:</label>
+      <input type="text" name="firstName" required>
+      <label>Last Name:</label>
+      <input type="text" name="lastName" required>
+      <label>Middle Name:</label>
+      <input type="text" name="middleName">
+      <label>Date of Birth:</label>
+      <input type="date" name="dob" required>
+      <label>Department:</label>
+      <select name="department" required>
+        <option>Engineering</option>
+        <option>Support</option>
+        <option>HR</option>
+        <option>Finance</option>
+      </select>
+      <label>Salary:</label>
+      <input type="number" name="salary" required>
+      <label>Permanent Address:</label>
+      <textarea name="permanentAddress" required></textarea>
+      <label>Current Address:</label>
+      <textarea name="currentAddress" required></textarea>
+      <label>ID Proof (PDF):</label>
+      <input type="file" name="idProof" accept="application/pdf" required>
+      <button type="submit" class="btn">Add Employee</button>
+    </form>
+  </div>
+
+  <!-- Employee List Page -->
+  <div class="container hidden" id="employeeListPage">
+    <h2>Employees</h2>
+    <div class="filters">
+      <input type="text" id="filterEmpId" placeholder="Employee ID">
+      <input type="text" id="filterFirstName" placeholder="First Name">
+      <input type="text" id="filterLastName" placeholder="Last Name">
+      <input type="text" id="filterLoginId" placeholder="Login ID">
+      <input type="date" id="filterDobFrom">
+      <input type="date" id="filterDobTo">
+      <select id="filterDepartment">
+        <option value="">All Departments</option>
+        <option>Engineering</option>
+        <option>Support</option>
+        <option>HR</option>
+        <option>Finance</option>
+      </select>
+      <button class="btn" onclick="fetchEmployees()">Search</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Login ID</th>
+          <th>DOB</th>
+          <th>Department</th>
+          <th>Salary</th>
+        </tr>
+      </thead>
+      <tbody id="employeeTableBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000/api';
+
+    function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('loginPage').classList.add('hidden');
+          document.getElementById('employeeFormPage').classList.remove('hidden');
+          document.getElementById('employeeListPage').classList.remove('hidden');
+          fetchEmployees();
+        } else {
+          alert('Invalid credentials');
+        }
+      });
+    }
+
+    document.getElementById('employeeForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+
+      fetch(`${API_BASE}/employee/add`, {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('Employee added successfully');
+          this.reset();
+          fetchEmployees();
+        } else {
+          alert(data.error || 'Error adding employee');
+        }
+      });
+    });
+
+    function fetchEmployees() {
+      const params = new URLSearchParams({
+        empId: document.getElementById('filterEmpId').value,
+        firstName: document.getElementById('filterFirstName').value,
+        lastName: document.getElementById('filterLastName').value,
+        loginId: document.getElementById('filterLoginId').value,
+        dobFrom: document.getElementById('filterDobFrom').value,
+        dobTo: document.getElementById('filterDobTo').value,
+        department: document.getElementById('filterDepartment').value,
+      });
+
+      fetch(`${API_BASE}/employee/filter?${params}`)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById('employeeTableBody');
+          tbody.innerHTML = '';
+          data.employees.forEach(emp => {
+            const row = `<tr>
+              <td>${emp.empId}</td>
+              <td>${emp.firstName} ${emp.lastName}</td>
+              <td>${emp.loginId}</td>
+              <td>${new Date(emp.dob).toLocaleDateString()}</td>
+              <td>${emp.department}</td>
+              <td>${emp.salary}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+          });
+        });
+    }
+  </script>
+</body>
+</html>
+
